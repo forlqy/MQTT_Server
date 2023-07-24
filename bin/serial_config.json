@@ -1,0 +1,35 @@
+{
+	"node-name":"theianode-002",
+	"devices":[
+		{
+			"uuid":"811310DCA32640069044B4B15A1A3BA2",
+			"key":"cluster-001",
+			"alias":"RS485通道",
+			"device-type":"cluster",
+			"model-type":"modbus-rtu",
+			"fetch-type":"push",
+			"dev":{
+				"instance":"/dev/tnCh0",
+				"baud-rate":9600,
+				"data-bits":8,
+				"parity":"n",
+				"stop-bits":"1"
+			}
+		},
+		{
+			"uuid":"165A879E9EF745FF9EA37D5650714F98",
+			"key":"light",
+			"alias":"调光灯通道",
+			"device-type":"cluster",
+			"model-type":"dimming-rtu",
+			"dev":{
+				"instance":"/dev/ttyS5",
+				"baud-rate":9600,
+				"data-bits":8,
+				"parity":"n",
+				"stop-bits":"1"
+			}
+		}
+	]
+}
+

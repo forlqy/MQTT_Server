@@ -1,0 +1,58 @@
+{
+	"cluster-name":"light",
+	"devices":[
+		{
+			"uuid":"D7D6B22BCB314121AB16152C3F84301C",
+			"key":"LED-WIT-TEST-001",
+			"alias":"测试调光灯-001",
+			"start-offset":15,
+			"device-type":"control",
+			"description":"1号测试调光灯",
+			"category":[
+				"ill-light"
+			],
+			"fields":[
+				"percentage"
+			],
+			"model-type":"WIT-ILL-M1",
+			"location":"711",
+			"unit":{
+				"percentage":"%"
+			},
+			"acquisition-cycle": 5000,
+			"manufacturer":"沃丁科技",
+			"channel":1,
+			"power":9,
+			"pan-sid":"0.0.0.0.0",
+			"group-sid":"00.00 H",
+			"device-sid":"84.14.00.22 H"
+		},
+		{
+			"uuid":"D4D6B32BCB214121AB1615266F84506C",
+			"key":"LED-WIT-TEST-002",
+			"alias":"测试调光灯-002",
+			"start-offset":15,
+			"device-type":"control",
+			"description":"2号测试调光灯",
+			"category":[
+				"ill-light"
+			],
+			"fields":[
+				"percentage"
+			],
+			"model-type":"WIT-ILL-M1",
+			"location":"711",
+			"unit":{
+				"percentage":"%"
+			},
+			"acquisition-cycle": 5000,
+			"manufacturer":"沃丁科技",
+			"channel":1,
+			"power":9,
+			"pan-sid":"0.0.0.0.0",
+			"group-sid":"00.00 H",
+			"device-sid":"84.14.00.22 H"
+		}
+	]
+}
+

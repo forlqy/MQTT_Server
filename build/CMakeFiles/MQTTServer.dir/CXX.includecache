@@ -1,0 +1,38 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/mars/MQTT_SERVER/src/main.cpp
+iostream
+-
+fstream
+-
+sstream
+-
+mosquitto.h
+-
+vector
+-
+unistd.h
+-
+chrono
+-
+thread
+-
+yaml-cpp/yaml.h
+-
+json/json.h
+-
+iomanip
+-
+string
+-
+random
+-
+unordered_map
+-
+

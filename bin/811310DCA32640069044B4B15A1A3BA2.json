@@ -1,0 +1,75 @@
+{
+	"cluster-name":"cluster-001",
+	"devices":[
+		{
+			"uuid":"29C5F44E0A49470FB06367CDC9724FD3",
+			"key":"TH-WIT-001",
+			"alias":"温湿度传感器-001",
+			"address":139,
+			"start-offset":0,
+			"device-type":"sensor",
+			"description":"1号测试温湿度传感器",
+			"category":[
+				"temperature",
+				"humidity"
+			],
+			"fields":[
+				"temperature",
+				"humidity"
+			],
+			"acquisition-cycle": 2000,
+			"model-type":"B-TH-RS30",
+			"location":"711",
+			"unit":{
+				"temperature":"℃",
+				"humidity":"%"
+			},
+			"manufacturer":"沃丁科技"
+		},
+		{
+			"uuid":"795B685C6A9840349AC02A725824C928",
+			"key":"CO2-WIT-001",
+			"alias":"二氧化碳传感器-001",
+			"address":122,
+			"start-offset":2,
+			"device-type":"sensor",
+			"description":"1号二氧化碳传感器 ",
+			"category":[
+				"CO2"
+			],
+			"fields":[
+				"concentration"
+			],
+			"acquisition-cycle": 1000,
+			"model-type":"PR-3002-CO2-NO1",
+			"location":"711",
+			"unit":{
+				"concentration":"ppm"
+			},
+			"manufacturer":"沃丁科技"
+		},
+		{
+			"uuid":"B52F0A27BCE64509B51B723C35FEF877",
+			"key":"RL-WIT-001",
+			"alias":"测试执行器-001",
+			"address":191,
+			"start-offset":0,
+			"device-type":"control",
+			"description":"测试继电器1号通道",
+			"category":[
+				"light"
+			],
+			"fields":[
+				"excitation"
+			],
+			"acquisition-cycle": 2000,
+			"model-type":"ZS-001",
+			"location":"711",
+			"unit":{
+				"excitation":"N/A"
+			},
+			"manufacturer":"沃丁科技"
+		}
+	]
+}
+
