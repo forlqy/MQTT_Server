@@ -12,6 +12,8 @@
 #include <string>
 #include <random>
 #include <unordered_map>
+#include <cpp_redis/cpp_redis>
+#include <librdkafka/rdkafkacpp.h>
 
 const std::string SERIAL_DATA_TOPIC = "serial/data";
 const std::string COMMAND_TOPIC = "command";
@@ -183,15 +185,21 @@ private:
     DeviceManager::ptr deviceManager;
     DataSimulator::ptr dataSimulator;
 
+    cpp_redis::client redisClient;
 public:
     using ptr = std::shared_ptr<DataAcquire>;
 
     DataAcquire() : deviceManager(), dataSimulator(){
         deviceManager = std::make_shared<DeviceManager>();
         dataSimulator = std::make_shared<DataSimulator>();
+
+        redisClient.connect("127.0.0.1", 6379);
     }
 
     void acquire(const std::string& uuid, const std::map<std::string, std::string>& data) {
+        redisClient.set(uuid, dataToJson(data));
+        redisClient.sync_commit();
+
         Json::Value jsonData;
         jsonData["uuid"] = uuid; 
         
@@ -223,49 +231,20 @@ private:
         ss << std::put_time(localtime(&itt), "%Y-%m-%dT%H:%M:%SZ");
         return ss.str();
     }
-};
 
-/*
-class DataSender {
-private:
-    mqtt::async_client mqttClient;
-    MessageHandler msgHandler;
-public:
-    using ptr = std::shared_ptr<DataSender>;
-    DataSender(std::function<void()> callback) : mqttClient(MQTT_SERVER_HOST, "mos"), msgHandler(callback) {
-        mqttClient.set_callback(msgHandler);
-
-        mqtt::connect_options connOpts;
-        connOpts.set_user_name("root");
-        connOpts.set_password("root");
-        mqttClient.connect(connOpts)->wait();
-    }
-
-    void send(const std::string& topic, const std::string& uuid, const std::map<std::string, std::string>& data) {
+    std::string dataToJson(const std::map<std::string, std::string>& data) {
+        // Convert the data map to a JSON string
+        // You might need to modify this part according to your actual data format
         Json::Value jsonData;
-        jsonData["uuid"] = uuid; 
         for (const auto& kv : data) {
             jsonData[kv.first] = kv.second;
         }
         jsonData["timestamp"] = getCurrentTimestamp();
-
         Json::StreamWriterBuilder writer;
-        std::string payload = Json::writeString(writer, jsonData);
-
-        mqtt::message_ptr pubmsg = mqtt::make_message(topic, payload);
-        mqttClient.publish(pubmsg)->wait_for(std::chrono::seconds(10));
-    }
-
-private:
-    std::string getCurrentTimestamp() {
-        auto now = std::chrono::system_clock::now();
-        auto itt = std::chrono::system_clock::to_time_t(now);
-        std::stringstream ss;
-        ss << std::put_time(localtime(&itt), "%Y-%m-%dT%H:%M:%SZ");
-        return ss.str();
+        return Json::writeString(writer, jsonData);
     }
 };
-*/
+
 
 class SerialManager{
 private:
@@ -372,6 +351,63 @@ public:
 };
 
 
+class CommandHandler {
+public:
+    using ptr = std::shared_ptr<CommandHandler>;
+    CommandHandler() {
+        // Initialize the Kafka producers
+        // You might need to modify this part according to your actual Kafka configuration
+        RdKafka::Conf* conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
+        RdKafka::Conf *tconf = RdKafka::Conf::create(RdKafka::Conf::CONF_TOPIC);
+        controllerCommandProducer = RdKafka::Producer::create(conf, errstr);
+        sensorCommandProducer = RdKafka::Producer::create(conf, errstr);
+
+        controllerTopic = RdKafka::Topic::create(controllerCommandProducer, "controller_topic", tconf, errstr);
+        sensorTopic = RdKafka::Topic::create(sensorCommandProducer, "sensor_topic", tconf, errstr);
+    }
+
+    void handleCommand(const std::string& command) {
+        // Determine the type of the command and add it to the corresponding queue
+        // You might need to modify this part according to your actual command format
+        if (isControllerCommand(command)) {
+            handleControllerCommand(command);
+        } else if (isSensorCommand(command)) {
+            handleSensorCommand(command);
+        } else {
+            // Handle other types of commands...
+        }
+    }
+
+private:
+    RdKafka::Producer* controllerCommandProducer;
+    RdKafka::Producer* sensorCommandProducer;
+    RdKafka::Topic *controllerTopic;
+    RdKafka::Topic *sensorTopic;
+    std::string errstr;
+
+    bool isControllerCommand(const std::string& command) {
+        // Determine whether the command is a controller command or not
+        // You might need to modify this part according to your actual command format
+        return command.find("controller") != std::string::npos;
+    }
+
+    bool isSensorCommand(const std::string& command) {
+        // Determine whether the command is a sensor command or not
+        // You might need to modify this part according to your actual command format
+        return command.find("sensor") != std::string::npos;
+    }
+
+    void handleControllerCommand(const std::string& command) {
+        // Add the command to the controller command queue
+        controllerCommandProducer->produce(controllerTopic, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_COPY, const_cast<char *>(command.c_str()), command.size(), nullptr, nullptr);
+    }
+
+    void handleSensorCommand(const std::string& command) {
+        // Add the command to the sensor command queue
+        sensorCommandProducer->produce(sensorTopic, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_COPY, const_cast<char *>(command.c_str()), command.size(), nullptr, nullptr);
+    }
+};
+
 
 class MQTTServer {
 public:
@@ -430,6 +466,8 @@ private:
     UpdateConfig puc;
     SerialManager::ptr serialManager;
     DataAcquire::ptr dataAcquire;
+
+    CommandHandler::ptr commandHandler;
 public:
     MQTTServer() : mosq(nullptr), puc(), serialManager(), dataAcquire() {
         mosquitto_lib_init();
@@ -476,7 +514,7 @@ public:
         MQTTServer* server = static_cast<MQTTServer*>(userdata);
 
         if (std::string(message->topic) == COMMAND_TOPIC) {
-            server->handleCommand(static_cast<const char*>(message->payload));
+            static_cast<MQTTServer*>(userdata)->commandHandler->handleCommand(static_cast<const char*>(message->payload));
         }
     }
 

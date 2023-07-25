@@ -9,8 +9,7 @@ set(SOURCES src/main.cpp)
 find_library(MOSQUITTO_LIBRARY mosquitto)
 
 # 添加包含目录
-include_directories(/usr/local/include)
-
+include_directories(/usr/local/include /usr/include/librdkafka)
 # 添加库目录
 link_directories(/usr/local/lib)
 
@@ -21,5 +20,5 @@ add_executable(MQTTServer ${SOURCES})
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
 # 链接所需的库
-target_link_libraries(MQTTServer ${MOSQUITTO_LIBRARY} yaml-cpp pthread jsoncpp)
+target_link_libraries(MQTTServer ${MOSQUITTO_LIBRARY} yaml-cpp pthread jsoncpp rdkafka++ cpp_redis tacopie)
 

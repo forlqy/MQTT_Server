@@ -1,1 +1,1 @@
-/usr/bin/c++     CMakeFiles/MQTTServer.dir/src/main.cpp.o  -o ../bin/MQTTServer   -L/usr/local/lib  -Wl,-rpath,/usr/local/lib /usr/lib/x86_64-linux-gnu/libmosquitto.so -lyaml-cpp -lpthread -ljsoncpp 
+/usr/bin/c++     CMakeFiles/MQTTServer.dir/src/main.cpp.o  -o ../bin/MQTTServer   -L/usr/local/lib  -Wl,-rpath,/usr/local/lib /usr/lib/x86_64-linux-gnu/libmosquitto.so -lyaml-cpp -lpthread -ljsoncpp -lrdkafka++ -lcpp_redis -ltacopie 
