@@ -13,7 +13,10 @@
 #include <random>
 #include <unordered_map>
 #include <cpp_redis/cpp_redis>
-#include <librdkafka/rdkafkacpp.h>
+#include <mutex>
+#include <queue>
+#include <condition_variable>
+#include "concurrentqueue.h"
 
 const std::string SERIAL_DATA_TOPIC = "serial/data";
 const std::string COMMAND_TOPIC = "command";
@@ -350,68 +353,7 @@ public:
     }
 };
 
-
-class CommandHandler {
-public:
-    using ptr = std::shared_ptr<CommandHandler>;
-    CommandHandler() {
-        // Initialize the Kafka producers
-        // You might need to modify this part according to your actual Kafka configuration
-        RdKafka::Conf* conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
-        RdKafka::Conf *tconf = RdKafka::Conf::create(RdKafka::Conf::CONF_TOPIC);
-        controllerCommandProducer = RdKafka::Producer::create(conf, errstr);
-        sensorCommandProducer = RdKafka::Producer::create(conf, errstr);
-
-        controllerTopic = RdKafka::Topic::create(controllerCommandProducer, "controller_topic", tconf, errstr);
-        sensorTopic = RdKafka::Topic::create(sensorCommandProducer, "sensor_topic", tconf, errstr);
-    }
-
-    void handleCommand(const std::string& command) {
-        // Determine the type of the command and add it to the corresponding queue
-        // You might need to modify this part according to your actual command format
-        if (isControllerCommand(command)) {
-            handleControllerCommand(command);
-        } else if (isSensorCommand(command)) {
-            handleSensorCommand(command);
-        } else {
-            // Handle other types of commands...
-        }
-    }
-
-private:
-    RdKafka::Producer* controllerCommandProducer;
-    RdKafka::Producer* sensorCommandProducer;
-    RdKafka::Topic *controllerTopic;
-    RdKafka::Topic *sensorTopic;
-    std::string errstr;
-
-    bool isControllerCommand(const std::string& command) {
-        // Determine whether the command is a controller command or not
-        // You might need to modify this part according to your actual command format
-        return command.find("controller") != std::string::npos;
-    }
-
-    bool isSensorCommand(const std::string& command) {
-        // Determine whether the command is a sensor command or not
-        // You might need to modify this part according to your actual command format
-        return command.find("sensor") != std::string::npos;
-    }
-
-    void handleControllerCommand(const std::string& command) {
-        // Add the command to the controller command queue
-        controllerCommandProducer->produce(controllerTopic, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_COPY, const_cast<char *>(command.c_str()), command.size(), nullptr, nullptr);
-    }
-
-    void handleSensorCommand(const std::string& command) {
-        // Add the command to the sensor command queue
-        sensorCommandProducer->produce(sensorTopic, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_COPY, const_cast<char *>(command.c_str()), command.size(), nullptr, nullptr);
-    }
-};
-
-
-class MQTTServer {
-public:
-    class UpdateConfig {
+class UpdateConfig {
     public:
         UpdateConfig(){
             seri = std::make_shared<SerialManager>();
@@ -452,8 +394,8 @@ public:
 
         void send(const std::string& data) {
             std::cout << "Sending feedback: " << std::endl << data << std::endl;
-
-            mosquitto_connect(mosqf, "10.0.0.18", 1883, 0);
+            
+            mosquitto_connect(mosqf, "10.0.0.18", 1883, 60);
             mosquitto_publish(mosqf, nullptr, FEEDBACK_TOPIC.c_str(), data.size(), data.c_str(), 0, false);
             mosquitto_disconnect(mosqf);
 
@@ -461,15 +403,96 @@ public:
         }
     };
 
+class CommandHandler {
+public:
+    using ptr = std::shared_ptr<CommandHandler>;
+
+    void handleCommand(const std::string& command) {
+        if (isControllerCommand(command)) {
+            getControllerCommandQueue().enqueue(command);
+        } else if (isSensorCommand(command)) {
+            getSensorCommandQueue().enqueue(command);
+            //std::cout << "enque success " << std::endl;
+        } else {
+            // Handle other types of commands...
+        }
+    }
+
+    void processCommands() {
+        std::string command;
+        while (getControllerCommandQueue().try_dequeue(command)) {
+            //std::cout << "try success" << std::endl;
+            handleControllerCommand(command);
+        }
+        while (getSensorCommandQueue().try_dequeue(command)) {
+            //std::cout << "try sensor success" << std::endl;
+            handleSensorCommand(command);
+        }
+    }
+
+    moodycamel::ConcurrentQueue<std::string>& getControllerCommandQueue() {
+    static moodycamel::ConcurrentQueue<std::string> controllerCommandQueue;
+    return controllerCommandQueue;
+    }
+
+    moodycamel::ConcurrentQueue<std::string>& getSensorCommandQueue() {
+    static moodycamel::ConcurrentQueue<std::string> sensorCommandQueue;
+    return sensorCommandQueue;
+    }
+
+
+private:
+    //moodycamel::ConcurrentQueue<std::string> controllerCommandQueue;
+    //moodycamel::ConcurrentQueue<std::string> sensorCommandQueue;
+
+    bool isControllerCommand(const std::string& command) {
+        return command.find("controller") != std::string::npos;
+    }
+
+    bool isSensorCommand(const std::string& command) {
+        return command.find("sensor") != std::string::npos;
+    }
+
+    void handleControllerCommand(const std::string& command) {
+        // Process the controller command
+    }
+
+    void handleSensorCommand(const std::string& command) {
+        // Process the sensor command
+        UpdateConfig uconfig;
+        
+        FeedBack feedBack;
+
+        if (command == "sensoruc") {
+            uconfig.update();
+        } else if (command == "sensorfb") {
+            std::ifstream file("29C5F44E0A49470FB06367CDC9724FD3.txt");
+            std::stringstream buffer;
+            buffer << file.rdbuf();
+            std::string fileContent = buffer.str();
+            file.close();
+
+            std::ifstream file1("B52F0A27BCE64509B51B723C35FEF877.txt");
+            std::stringstream buffer1;
+            buffer1 << file1.rdbuf();
+            fileContent += buffer1.str();
+            std::cout << "feedback content: " << fileContent << std::endl;
+            file1.close();
+
+            feedBack.send(fileContent);
+        }
+    }
+};
+
+
+class MQTTServer {
 private:
     struct mosquitto* mosq;
-    UpdateConfig puc;
     SerialManager::ptr serialManager;
     DataAcquire::ptr dataAcquire;
-
     CommandHandler::ptr commandHandler;
 public:
-    MQTTServer() : mosq(nullptr), puc(), serialManager(), dataAcquire() {
+    MQTTServer() : mosq(nullptr), serialManager(std::make_shared<SerialManager>()), dataAcquire(std::make_shared<DataAcquire>()), commandHandler(std::make_shared<CommandHandler>()) {
         mosquitto_lib_init();
         mosq = mosquitto_new(nullptr, true, nullptr);
         if (!mosq) {
@@ -480,10 +503,10 @@ public:
         mosquitto_username_pw_set(mosq, "root", "root");
 
         mosquitto_message_callback_set(mosq, message_callback);
-        serialManager = std::make_shared<SerialManager>();
-        dataAcquire = std::make_shared<DataAcquire>();
     }
 
+    ~MQTTServer(){
+    }
 
     void start(const std::string& serverAddress, int serverPort) {
         int resultCode = mosquitto_connect(mosq, serverAddress.c_str(), serverPort, 60);
@@ -514,35 +537,17 @@ public:
         MQTTServer* server = static_cast<MQTTServer*>(userdata);
 
         if (std::string(message->topic) == COMMAND_TOPIC) {
-            static_cast<MQTTServer*>(userdata)->commandHandler->handleCommand(static_cast<const char*>(message->payload));
+            static_cast<MQTTServer*>(userdata)->handleCommand(static_cast<const char*>(message->payload));
         }
     }
 
 
 
     void handleCommand(const std::string& command) {
-        UpdateConfig uconfig;
-        
-        FeedBack feedBack;
-
-        if (command == "uc") {
-            uconfig.update();
-            puc = uconfig;
-        } else if (command == "fb") {
-            std::ifstream file("29C5F44E0A49470FB06367CDC9724FD3.txt");
-            std::stringstream buffer;
-            buffer << file.rdbuf();
-            std::string fileContent = buffer.str();
-            file.close();
-
-            std::ifstream file1("B52F0A27BCE64509B51B723C35FEF877.txt");
-            std::stringstream buffer1;
-            buffer1 << file1.rdbuf();
-            fileContent += buffer1.str();
-            file1.close();
-
-            feedBack.send(fileContent);
-        }
+        std::string rcom = "sensor" + command;
+        //std::cout << "really command: " << rcom << std::endl;
+        commandHandler->handleCommand(rcom);
+        commandHandler->processCommands();
     }
 };
 
