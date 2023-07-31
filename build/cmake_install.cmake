@@ -1,4 +1,4 @@
-# Install script for directory: /home/mars/MQTT_SERVER
+# Install script for directory: /home/company/MQTT_Server
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/mars/MQTT_SERVER/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/company/MQTT_Server/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

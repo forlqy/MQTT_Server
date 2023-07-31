@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/mars/MQTT_SERVER/src/main.cpp" "/home/mars/MQTT_SERVER/build/CMakeFiles/MQTTServer.dir/src/main.cpp.o"
+  "/home/company/MQTT_Server/src/main.cpp" "/home/company/MQTT_Server/build/CMakeFiles/MQTTServer.dir/src/main.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
