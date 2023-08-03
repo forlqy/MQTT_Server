@@ -217,15 +217,15 @@ public:
     }
 
     void acquireData(const std::string& uuid, const Json::Value& jsonData) {
-            // Write the data to a file with the name of the device's UUID
-            std::ofstream dataFile(uuid + ".txt", std::ios::out | std::ios::app);
-            for(const auto& element : jsonData.getMemberNames()){
-                dataFile << element << ": " << jsonData[element].asString() << std::endl;
-                dataFile.flush();
-            }
-                
-            dataFile.close();
+        // Write the data to a file with the name of the device's UUID
+        std::ofstream dataFile(uuid + ".txt", std::ios::out | std::ios::app);
+        for(const auto& element : jsonData.getMemberNames()){
+            dataFile << element << ": " << jsonData[element].asString() << std::endl;
+            dataFile.flush();
         }
+                
+        dataFile.close();
+    }
 private:
     std::string getCurrentTimestamp() {
         auto now = std::chrono::system_clock::now();
@@ -262,6 +262,7 @@ public:
         loadSerialConfig("serial_config.json");
 
         loadDevicesFromSerials();
+
 
         dataAcquire = std::make_shared<DataAcquire>();
     }
@@ -318,6 +319,7 @@ public:
                 std::cout << device.uuid << std::endl;
                
                 dataAcquire->acquire(device.uuid, simulatedData);
+                std::cout << "acqu: " << device.acquisitionCycle << std::endl;
         
                 // 按照设备的获取周期暂停
                 std::this_thread::sleep_for(std::chrono::milliseconds(device.acquisitionCycle));
@@ -329,47 +331,26 @@ public:
         for(const auto& serialUUID : serialUUIDs){
             std::string deviceConfigFilename = serialUUID + ".json";
             //reload
-            std::ifstream file(deviceConfigFilename);
-            if(!file.is_open()){
-                std::cerr << "Failed to open device configuration file: " << deviceConfigFilename << std::endl;
-                continue;
-            }
-
-            Json::Value root;
-            file >> root;
-
-            //get newCycle
-            int newAcquisitionCycle = root["acquisition-cycle"].asInt();
-            
-            for(auto& uuid_device : deviceManager.getDevices()){
-                auto& device = uuid_device.second;
-                if(device.uuid == serialUUID){
-                    device.setAcquisitionCycle(newAcquisitionCycle);
-                    break;
-                }
-            }
-            file.close();
+            deviceManager.loadDeviceFromFile(deviceConfigFilename);
         }
     }
 };
-
+//SerialManager::ptr serialManager;
+auto serialManager = std::make_shared<SerialManager>(); 
 class UpdateConfig {
-    public:
+public:
         UpdateConfig(){
-            seri = std::make_shared<SerialManager>();
         }
         
         void update() {
             std::cout << "Updating configuration file..." << std::endl;
 
-            seri->updateDevicesAndSerialConfig();
+            serialManager->updateDevicesAndSerialConfig();
             std::cout << "Updating Success!" << std::endl;
 
 
         }
-    private:
-        SerialManager::ptr seri;
-    };
+};
 
     class FeedBack {
     private:
@@ -393,9 +374,9 @@ class UpdateConfig {
         }
 
         void send(const std::string& data) {
-            std::cout << "Sending feedback: " << std::endl << data << std::endl;
+            std::cout << "Sending feedback: " << std::endl;
             
-            mosquitto_connect(mosqf, "10.0.0.18", 1883, 60);
+            mosquitto_connect(mosqf, "127.0.0.1", 1883, 60);
             mosquitto_publish(mosqf, nullptr, FEEDBACK_TOPIC.c_str(), data.size(), data.c_str(), 0, false);
             mosquitto_disconnect(mosqf);
 
@@ -488,11 +469,10 @@ private:
 class MQTTServer {
 private:
     struct mosquitto* mosq;
-    SerialManager::ptr serialManager;
     DataAcquire::ptr dataAcquire;
     CommandHandler::ptr commandHandler;
 public:
-    MQTTServer() : mosq(nullptr), serialManager(std::make_shared<SerialManager>()), dataAcquire(std::make_shared<DataAcquire>()), commandHandler(std::make_shared<CommandHandler>()) {
+    MQTTServer() : mosq(nullptr), dataAcquire(std::make_shared<DataAcquire>()), commandHandler(std::make_shared<CommandHandler>()) {
         mosquitto_lib_init();
         mosq = mosquitto_new(nullptr, true, nullptr);
         if (!mosq) {
@@ -553,7 +533,7 @@ public:
 
 int main() {
     MQTTServer server;
-    server.start("10.0.0.18", 1883);
+    server.start("127.0.0.1", 1883);
     return 0;
 }
 

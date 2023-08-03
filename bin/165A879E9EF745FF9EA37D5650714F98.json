@@ -19,7 +19,7 @@
 			"unit":{
 				"percentage":"%"
 			},
-			"acquisition-cycle": 5000,
+			"acquisition-cycle": 4000,
 			"manufacturer":"沃丁科技",
 			"channel":1,
 			"power":9,
